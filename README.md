@@ -6,3 +6,5 @@ Change `num_trajectories` for more trajectories. Values are input through list `
 Run this file to generate two `.txt` files for analysis.
 ## Analysis_decision_task.ipynb
 Notebook for analysis.
+## training_decision_task_1.py
+First attempt to add one more trajectory.
