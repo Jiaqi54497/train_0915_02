@@ -16,6 +16,7 @@ def main(args):
     num_iters = args.num_iters
     num_nodes = args.num_nodes
     num_networks = args.num_networks
+    num_trajectories = args.num_trajectories
 
     for network_number in range(num_networks):
         #Defining Network
@@ -117,44 +118,23 @@ def main(args):
             def input1(time):
                 #running for 15 seconds = 15000ms
                 if time < switch_time:
-                    return vals[0] + np.random.normal(0, .01)
+                    return vals[i] + np.random.normal(0, .01)
                 else:
-                    return vals[2] + np.random.normal(0, .01)
+                    return vals[i+2] + np.random.normal(0, .01)
 
             def input2(time):
                 #running for 15 seconds = 15000ms
                 if time < switch_time:
-                    return vals[1] + np.random.normal(0, .01)
+                    return vals[i+1] + np.random.normal(0, .01)
                 else:
-                    return vals[3] + np.random.normal(0, .01)
-
-            def input3(time):
-                #running for 15 seconds = 15000ms
-                if time < switch_time:
-                    return vals[4] + np.random.normal(0, .01)
-                else:
-                    return vals[6] + np.random.normal(0, .01)
-
-            def input4(time):
-                #running for 15 seconds = 15000ms
-                if time < switch_time:
-                    return vals[5] + np.random.normal(0, .01)
-                else:
-                    return vals[7] + np.random.normal(0, .01)
+                    return vals[i+2] + np.random.normal(0, .01)
 
             def target_func(time):
                 #running for 15 seconds = 15000ms
                 if time < switch_time:
-                    return 0.5 * (vals[0] > vals[1]) + .8 * (vals[1] > vals[2])
+                    return 0.5 * (vals[i] > vals[i+1]) + .8 * (vals[i+1] > vals[i])
                 else:
-                    return 0.5 * (vals[2] > vals[3]) + .8 * (vals[3] > vals[2])
-
-            def target_func2(time):
-                #running for 15 seconds = 15000ms
-                if time < switch_time:
-                    return 0.5 * (vals[4] > vals[5]) + .8 * (vals[5] > vals[4])
-                else:
-                    return 0.5 * (vals[6] > vals[7]) + .8 * (vals[7] > vals[6])
+                    return 0.5 * (vals[i+2] > vals[i+3]) + .8 * (vals[i+3] > vals[i+2])
 
             def error_mask_func(time):
                 #Makes loss automatically 0 during switch for 150 ms.
@@ -165,28 +145,29 @@ def main(args):
                     return 0
                 else:
                     return 1
-            return input1, input2, input3, input4, target_func, target_func2, error_mask_func
+            return input1, input2, target_func, error_mask_func
 
         targets = []
         inputs = []
         error_masks = []
         print('Preprocessing...', flush = True)
         for iter in tqdm(range(num_iters * 5), leave = True, position = 0):
-            input1, input2, input3, input4, target_func, target_func2, error_mask_func = gen_functions()
-            targets.append(network.convert(time, [target_func]))
-            targets.append(network.convert(time, [target_func2]))
-            input_funcs[2] = input1
-            input_funcs[3] = input2
-            inputs.append(network.convert(time, input_funcs))
-            input_funcs[2] = input3
-            input_funcs[3] = input4
-            inputs.append(network.convert(time, input_funcs))
-            error_masks.append(network.convert(time, [error_mask_func]))
-            error_masks.append(network.convert(time, [error_mask_func]))
+            input1, input2, target_func, error_mask_func = gen_functions()
+            for i in range(0,num_trajectories*4,4):
+                targets.append(network.convert(time, [target_func]))
+            # targets.append(network.convert(time, [target_func2]))
+                input_funcs[2] = input1
+                input_funcs[3] = input2
+                inputs.append(network.convert(time, input_funcs))
+            # input_funcs[2] = input3
+            # input_funcs[3] = input4
+            # inputs.append(network.convert(time, input_funcs))
+                error_masks.append(network.convert(time, [error_mask_func]))
+            # error_masks.append(network.convert(time, [error_mask_func]))
             # print('inputs:',len(inputs),inputs[-1].shape)
         print('Training...', flush = True)
         weight_history, losses = network.train(num_iters, targets, time, num_trials = 10, inputs = inputs,
-                      input_weight_matrix = input_weight_matrix, learning_rate = .001, error_mask = error_masks, save = 5)
+                      input_weight_matrix = input_weight_matrix, learning_rate = .001, error_mask = error_masks, save = 10)
 
         net_weight_history['trained weights'] = np.asarray(weight_history).tolist()
 
@@ -226,6 +207,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_iters', type=int, default=500)
     parser.add_argument('--num_nodes', type=int, default=256)
     parser.add_argument('--num_networks', type=int, default=1)
+    parser.add_argument('--num_trajectories', type=int, default=2)
 
     args = parser.parse_args()
     main(args)
